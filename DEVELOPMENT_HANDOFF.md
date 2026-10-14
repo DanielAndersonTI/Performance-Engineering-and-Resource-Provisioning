@@ -1,142 +1,110 @@
 # Development Handoff — Demand, Provisioning, and Performance
 
-This file is the internal source of truth for the agreed development workflow and its current progress. It is written in English because it is an internal project document, not a professor-facing deliverable. Update the progress log whenever a stage is completed so another AI assistant can continue without requiring the user to repeat prior decisions.
+This is the internal record of how the work was done and of what is still open. It is written in English because it is not a professor-facing deliverable; `README.md` and `RELATORIO.md` are in Portuguese, as the course requires.
 
-## Project purpose
+## Status
 
-Build three small, well-engineered web backend applications for the course assignment. Each application must represent a distinct computational profile:
+The assignment's technical work is **complete**: three applications, the virtual machine, four provisioning scenarios measured end to end, raw data, figures, and the results document. What remains is delivery — committing the code, the LCC3 demonstration and the delivery form — plus the open items at the end of this file. **Nothing has been committed**; the user commits personally.
 
-1. CPU-bound
-2. Memory-bound
-3. IO-bound
+## Working agreement
 
-The applications are experimental instruments for studying how workload demand and VM resource provisioning affect application performance and infrastructure utilization. They are not intended to be feature-complete commercial products.
+- **Python**, one shared implementation built on the colleague-authored baseline. The earlier Java / Spring Boot / Spec Kit material at the repository root (`apps/cpu-bound/`) is superseded and is kept only because its removal was never authorized.
+- **Language:** code and internal documents in English; professor-facing documents in Portuguese.
+- **Commits:** never without explicit approval; the user commits personally.
+- **Pace:** short messages, one stage at a time, ask before anything long or expensive.
+- **Time budget:** roughly 10 hours in total, including VM setup and the experiments.
+- The agreed RED → review → GREEN → review → REFACTOR cycle was followed while the applications were being written. That work is closed; the cycle is no longer an active gate, but the review habit is: do not silently decide design questions, and do not broaden scope.
 
-## Confirmed decisions
+## Assignment requirements
 
-- Use **Java** for all three applications.
-- Keep each application in its own directory within this repository. Proposed layout:
-  - `apps/cpu-bound/`
-  - `apps/memory-bound/`
-  - `apps/io-bound/`
-- Develop **one application at a time** and finish its tasks before starting the next application.
-- Use Spec Kit to define requirements, specifications, and implementation tasks before implementing each application.
-- Do not use DDD/domain modeling unless a later, explicit requirement makes it necessary. The user has chosen to leave it out.
-- Tasks must be cohesive and medium-sized: not trivial micro-tasks, and not so large that they combine an entire application or multiple reviewable behaviors.
-- Complete each task through the full **RED → human review → GREEN → human review → REFACTOR → validation → human review** cycle before proceeding to the next task.
-- At each review point, briefly explain what was done and present clear options for the user to approve, request changes, or inspect further. Do not continue to the next phase until the user evaluates and authorizes it.
-- The user remains the decision-maker for requirements, architecture choices, tests, and acceptance. Do not invent requirements or silently broaden task scope.
-- Aim for secure, correct, runnable, maintainable, and appropriately performant code. Keep the design as simple as possible while meeting the assignment's experimental goals; do not add commercial-product features without approval.
-- Do not create commits unless the user explicitly requests or approves them.
-- All code and internal documentation that will **not** be submitted to the professor must be in English, including filenames. Professor-facing assignment documentation may follow the language and format required by the course.
+- Three backend web applications, one per predominant profile: CPU-bound, memory-bound, IO-bound.
+- Run and test all three locally.
+- Configure a VirtualBox VM from the professor's guide, deploy one application and demonstrate it.
+- Demonstrate the applications on the LCC machines.
+- **Generate the load from outside the VM.**
+- At least **four** provisioning scenarios, each with more than one demand level. The activity statement's four take precedence over the report template's "at least two".
+- Collect application metrics (latency, throughput, failures/timeouts) and VM infrastructure metrics (CPU, memory).
+- Preserve the raw data; compare scenarios with plots; document methodology, results and conclusions in the professor's template.
+- Each group member submits the delivery form once.
 
-## Assignment requirements to preserve
+## What was built
 
-- Develop three web applications, backend only, each with a different predominant profile: CPU-bound, memory-bound, or IO-bound.
-- Run and test all three applications locally.
-- Configure a VirtualBox VM using the professor's provided guide, deploy one application, and demonstrate it running.
-- Demonstrate the applications running on the LCC as required by the professor.
-- Generate load from **outside** the VM.
-- Run several demand levels for each provisioning scenario and use **at least four provisioning scenarios**. The assignment's four-scenario requirement takes precedence over the report template's reference to at least two.
-- Collect application metrics, including response latency/time and throughput (requests per second), as applicable. Record failures/timeouts too.
-- Collect VM infrastructure metrics, including CPU utilization and memory consumption/utilization.
-- Compare scenarios using plots and explain how demand, provisioned resources, performance, and utilization relate, including observed performance degradation.
-- Preserve raw experiment data and document methodology, results, and conclusions using the professor's report template.
-- Each group member must submit the delivery form once.
+**One implementation, three applications.** `apps/server.py` holds all three profiles behind a shared `ThreadingHTTPServer`. `apps/cpu/server.py`, `apps/memory/server.py` and `apps/io/server.py` are thin launchers that load it by absolute path — loading it by name would collide, since each launcher is itself `server.py`.
 
-## Measurement and engineering guidance
+**Contract.** `GET /health` → `{"status": "ok", "profile": ...}`. `GET /work?size=N` → `{"profile", "duration_seconds", "result"}`. Errors: 404 unknown route, 400 invalid `size`, 503 no free work slot, 500 storage failure (IO profile only).
 
-- Measure client-observed latency and throughput at the external load generator. Measurements only inside the application omit client-to-server effects and are not the primary end-to-end result.
-- Measure VM CPU and memory using suitable monitoring on the VM/host side. Application-side instrumentation may be added only when it is useful, bounded, and does not materially distort the workload.
-- The applications must provide controlled, bounded operations that exercise their intended profiles. Validate inputs and cap work/allocation so tests cannot trigger uncontrolled resource use.
-- Keep experiment settings and test conditions reproducible. Record VM CPU/vCPU and memory settings, load-generation location/tool, load levels, run duration, repetitions, warm-up, and relevant runtime configuration.
-- Do not encode environment-dependent latency targets as ordinary unit-test pass/fail criteria. Use functional tests for behavior and controlled load experiments for performance conclusions.
-- For Java measurements, keep the JDK/runtime and relevant JVM configuration consistent and record them. Account for JVM warm-up before collecting comparable measurements.
-- Compare the three applications primarily as separate demonstrations of resource profiles. Do not assume their absolute performance is directly comparable unless the methodology controls the relevant differences.
+**Profile parameters.** `DEFAULT_SIZE` cpu 10 / memory 32 MiB / io 1024 KiB. `MAX_SIZE` cpu 300 / memory 256 MiB / io 32768 KiB. `DEFAULT_MAX_CONCURRENCY` cpu 32 / memory 4 / io 16. Admission control is a per-instance `threading.BoundedSemaphore`: a request that cannot take a slot is answered immediately with HTTP 503 rather than queueing without bound. The ceilings exist so a load test cannot drive the machine into uncontrolled resource use.
 
-## Development workflow for each application
+**CPU profile and the GIL.** The baseline hashed a chain of small digests, which stays entirely inside the GIL, so the profile could gain nothing from extra vCPUs — the very relationship the assignment has to measure. `compute_cpu` now hashes a fixed 1 MiB block and writes the digest back into its first 32 bytes. CPython releases the GIL for `hashlib` inputs of 2048 bytes or more, so concurrent requests can occupy several cores; an isolated probe measured ~2.3x scaling for the large-block version against 0.27x for the small-digest version. The workload stays deterministic and bounded.
 
-1. **Agree on scope:** identify the computational profile, the minimal useful backend behavior, safety limits, and what the experiment needs to observe. Resolve significant design choices with the user.
-2. **Spec Kit requirements and specification:** capture requirements, scenarios, constraints, and testable acceptance criteria in the repository's Spec Kit artifacts. Keep the specification focused on the assignment; do not add an unrelated business domain.
-3. **Create medium-sized tasks:** each task should describe its goal, context, constraints, completion criteria, and expected tests. Keep traceability from requirements to tasks and tests.
-4. **RED:** add tests for the current task only; run them and confirm they fail for the expected missing behavior. Do not implement production behavior during RED. Explain the tests and request the user's review.
-5. **GREEN:** after user approval, implement the minimum behavior needed to pass the approved tests. Run the focused tests and explain the change and results; request review.
-6. **REFACTOR:** after user approval, improve structure without changing the specified behavior. Run the focused tests and relevant regression checks; explain the changes and request review.
-7. **Finish the task:** update relevant documentation and Spec Kit task status. Proceed only after the user's review and approval.
-8. **Finish the application:** run the appropriate tests/build, verify local execution, document how to run it, and record remaining limitations before starting the next application.
+**Memory profile — do not "optimise" the page loop.** `compute_memory` allocates `size` MiB and then touches one byte per 4 KiB page. The loop looks like waste, because `bytearray()` already faults the pages in C, but it is load-bearing: it yields the GIL every ~5 ms, which is what lets concurrent allocations coexist. Measured in the guest with four concurrent 256 MiB requests: with the loop, 298 ms per request and 1033 MB peak RSS; without it, 288 ms and 265 MB peak RSS — the allocations stop overlapping and the 1 GB scenarios would no longer swap at all. The loop costs about 3% of the request time and produces the central finding of the study. See `RELATORIO.md` §3.4.4.
 
-The RED/GREEN/REFACTOR stages apply to each task, not to an entire application as one oversized cycle. User review is required after each stage as agreed.
+**IO profile.** Writes `size` KiB to a temporary file, `fsync`s it, and reads it back.
 
-## Not yet decided
+**Tests.** `tests/test_applications.py`, 9 tests: profile identity, per-profile result shape, determinism, default size, invalid-size rejection, unknown route, the shared `--profile` entry point, unknown-profile rejection, and the 503 admission limit. All 9 pass on the host (Python 3.12) and inside the VM (Python 3.10.12). No test asserts latency or throughput — those depend on the machine and belong to the experiments.
 
-Do not silently decide these items. Present a concise recommendation and obtain the user's agreement when they become relevant:
+**Scripts.** `load_test.py` (external load generator: one thread per client, percentiles by linear interpolation over the full sample, per-kind error classification), `monitor.py` (VM-side sampling into `results/resources.csv`), `run_scenario.py` (host-side sweep of every demand level of one scenario, per-level warm-up, UTC windows written to `results/run_log.csv`), `plot_results.py` (joins resource samples to demand levels through those windows, writes `summary.csv` and the figures), `capture_evidence.py` (reads the provisioning straight from VirtualBox). `scripts/smoke_test.py` is a weaker legacy duplicate of the test suite; deleting it was never authorized.
 
-- Which application to develop first. CPU-bound is a reasonable proposed starting point, but is not yet confirmed.
-- Java framework, JDK version, build tool, and testing libraries.
-- The concrete operation and bounded parameters used to represent each computational profile.
-- The external load-generation and infrastructure-monitoring tools.
-- Exact VM provisioning levels, demand levels, run durations, and repetition counts.
-- How Spec Kit is installed or initialized in this workspace, if it is not already available.
-- Any extra application-level metrics endpoint or instrumentation beyond the external and VM-side measurements.
+## The virtual machine
 
-## Proposed repository organization
+- `Po-2026.2`, Ubuntu Server 22.04 LTS, 12 GB disk, user `daniel`, Python 3.10.12, `python3-psutil` 5.9.0 from apt. There is no `pip` in the guest and none is needed. Code copied to `~/atividade2`.
+- Network: NAT, guest address 10.0.2.15, port forwarding `ssh` 2222→22 and `app` 8080→8000.
+- Host-side access uses the ed25519 key at `~/.ssh/po_atividade2`. The password helper used once to install it was deleted; every later command is key-based.
+- Host: Intel Core i3-6006U, **2 physical cores** (4 logical). The guest, the load generator and VirtualBox's NAT engine share them, and that is the main source of measurement noise.
+- **Operational note.** A stale process holding host port 8080 silently disables the VM's port forward for the whole lifetime of the VM: the NAT rule fails to bind at boot, so requests are answered by whatever else owns the port. Check that the port is free before starting the guest. The rule can be restored live with `VBoxManage controlvm "Po-2026.2" natpf1 delete "app"` followed by `natpf1 "app,tcp,,8080,,8000"`.
 
-```text
-.
-├── apps/
-│   ├── cpu-bound/
-│   ├── memory-bound/
-│   └── io-bound/
-├── DEVELOPMENT_HANDOFF.md
-├── README.md
-└── ...
-```
+## The experiment
 
-This is a proposed layout, not an instruction to create application files before the user authorizes the first application. Spec Kit's own files and any shared experiment tooling should be placed according to its conventions and the agreed project organization.
+**Application under test:** memory-bound, size fixed at **256 MiB** per request — the only setting at which a 1 GB guest swaps and a 2 GB guest does not.
 
-## Progress log
+**Protocol:** demand levels 1, 2 and 4 concurrent clients (4 is the profile's admission limit, so the rejection path is not part of the measurement); 5 s of unrecorded warm-up plus 40 s measured per level; 120 s request timeout; one repetition; load generated from the **host**; guest sampled every ~0.5 s; each level's UTC window recorded in `run_log.csv`.
 
-### Stage 0 — Agreement and workspace preparation
+**Matrix:** C1 1 vCPU / 1 GB, C2 2 vCPU / 1 GB, C3 1 vCPU / 2 GB, C4 2 vCPU / 2 GB — one variable changed per step.
 
-- **Status:** Complete.
-- **Completed:** Recorded the assignment goals, confirmed Java, separate application directories, one-application-at-a-time sequencing, omission of DDD, task sizing expectations, user-reviewed RED/GREEN/REFACTOR workflow, engineering quality goals, measurement guidance, and handoff requirements.
-- **Workspace inspection:** The project root contains the existing `README.md` and `LICENSE`; no application source or Spec Kit project files were present at preparation time.
-- **Files changed:** Added this internal handoff document only. The existing professor-facing `README.md` was not changed.
-- **Not done:** No application, Spec Kit specification/task, source code, test, dependency setup, or experiment tooling has been created or executed.
+| scenario | L1 rps | L2 rps | L4 rps | L4 p95 | peak guest swap |
+| --- | --- | --- | --- | --- | --- |
+| C1 (1 vCPU / 1 GB) | 3.72 | 3.59 | 1.98 | 5128 ms | 507 MB |
+| C2 (2 vCPU / 1 GB) | 3.39 | 3.47 | 1.19 | 11616 ms | 545 MB |
+| C3 (1 vCPU / 2 GB) | 3.44 | 2.12 | 2.05 | 5633 ms | 0 MB |
+| C4 (2 vCPU / 2 GB) | 3.68 | 1.65 | 2.07 | 3545 ms | 0 MB |
 
-### Stage 1 — CPU-bound application scoping and Spec Kit setup
+**Findings.**
 
-- **Status:** Complete; constitution ratified. Feature behavior is still being scoped.
-- **Completed:** User authorized starting with the CPU-bound application and selected counting primes up to a configurable limit as its workload. Confirmed `specify` CLI is installed and `specify check` reports it is ready. Initialized Spec Kit with the Copilot integration and PowerShell scripts under `apps/cpu-bound/`.
-- **Generated setup:** Spec Kit templates, scripts, workflow, and Copilot skills are under `apps/cpu-bound/.specify/` and `apps/cpu-bound/.github/skills/`. Initialization also generated the root `.vscode/settings.json` with command-specific terminal approvals; inspect before any future edits.
-- **Setup safety:** An initial attempt to initialize Spec Kit at the repository root was cancelled by the CLI's non-empty-directory confirmation. It made no changes. Do not use `--force` at the root because existing project files must be preserved.
-- **Constitution:** `.specify/memory/constitution.md` in the CPU app directory records the confirmed scope and TDD/review gates. The user reviewed and approved it; it is ratified as version 1.0.0 on 2026-10-13.
-- **Validation:** `git diff --check` completed without whitespace errors, and a placeholder scan found no unresolved `[ALL_CAPS]` template tokens in the constitution. No build or tests were run because no application code exists.
-- **Files changed/generated:** Added this handoff document, the draft constitution, Spec Kit's CPU-app scaffolding, and `.vscode/settings.json`. The existing `README.md` and `LICENSE` remain untouched.
-- **Not done:** No application source, tests, feature specification, implementation plan, task list, dependency setup, or experiment tooling has been created. API response shape, work limit, framework, JDK version, and build tool remain undecided.
+1. **RAM provisioning is the decisive variable.** Both 1 GB scenarios drove the guest into swap (507 MB, 545 MB); both 2 GB scenarios recorded **zero** swap at every level. Peak resident memory was 877–879 MB at 1 GB against 1202–1204 MB at 2 GB.
+2. **Extra vCPUs do not help this application.** Guest CPU settles at ~48% of the two-core total in C2 and C4 — about one core — and at 96–99% of the single core in C1 and C3. The second vCPU is never used.
+3. **Why: the GIL, and the page loop.** The memory-bound work is pure Python bytecode serialised by the GIL, so throughput is capped at ~3.5 rps and additional demand only accumulates latency; that same serialisation keeps too few requests in flight for the 503 path to trigger. Flat throughput with linearly growing latency is the classic saturated-resource signature (Little's Law).
 
-### Stage 2 — CPU workload, stack, and feature specification
+**Independent confirmation that the matrix was applied during the runs.** The raw samples in `results/resources.csv` record `cpu_count` 1 / 2 / 1 / 2 and the memory peaks quoted above, matching C1–C4 exactly. The scenarios were not merely configured; they were in force while the numbers were taken.
 
-- **Status:** Specification drafted and quality-checked; awaiting user review.
-- **Agreed behavior:** The CPU workload counts prime numbers up to a configurable limit. The response should contain the requested limit and the prime count, not the full list, to avoid adding unnecessary response-transfer work.
-- **Agreed safety limit:** Start with a configurable maximum request limit of 1,000,000. Validate locally that this is safe and produces measurable work before VM experiments; revisit only with user review if evidence supports a change.
-- **Agreed stack:** Java 21, Spring Boot, and Maven Wrapper. Java 21.0.2 LTS is available locally; Maven and Gradle are not on PATH, so use the project wrapper rather than requiring a global Maven install.
-- **Spec Kit artifacts:** Feature directory `apps/cpu-bound/specs/001-prime-count-api/`; specification in `spec.md`; requirements checklist in `checklists/requirements.md`; `.specify/feature.json` points to this feature.
-- **Validation:** Reviewed all mandatory spec sections and acceptance criteria; the requirements checklist is complete; no unresolved specification placeholders remain. `git diff --check` reported no whitespace errors.
-- **Not done:** No Java source, build project, or Java tests exist. No implementation plan or task list has been created. Exact HTTP method/path, response field names, and error schema remain for the plan/API contract and user review.
+**Evidence.** `capture_evidence.py` was run once per scenario, producing `evidencias/C{1..4}-config.txt` (provisioning summary plus the full `VBoxManage showvminfo --machinereadable`) and `evidencias/C{1..4}-console.png` (guest console, captured in the same boot as the measurement). The user's own `vm-configuracao-placa-mae.png`, `vm-configuracao-processador.png` and `vm-ubuntu-instalada.png` sit alongside them. The free-text caption of `C1-config.txt` was corrected after the fact — it carried a leftover note naming the cpu-bound profile while the other three named the memory-bound one; the machine-derived content of the file was not touched.
 
-### Next stage — User review of the feature specification
+## Deliverables written
 
-- **Status:** Paused at the user's request on 2026-10-13, before the specification was approved.
-- **Resume point:** Ask the user to approve or request edits to `apps/cpu-bound/specs/001-prime-count-api/spec.md`. The user has not approved it yet.
-- **Next actions after approval:** Draft the implementation plan and API contract using Java 21, Spring Boot, and Maven Wrapper; propose medium-sized tasks that each receive a complete user-reviewed RED/GREEN/REFACTOR cycle. Do not begin application implementation until the plan and tasks are approved.
-- **Current code status:** No Java source, Maven project, or test files have been created. No RED phase has started.
-- **Current estimate:** Approximately 2–4 more hours of active work for the first locally runnable, tested, refactored, and documented application. VM deployment, load experiments, and the course report are excluded; actual elapsed time depends on review cycles and environment issues.
+- **`RELATORIO.md`** — the professor's three sections, with the comparative results (§3.3) and the interpretation and conclusions (§3.4) nested inside the stress-test section. It states the three findings, the GIL / page-loop mechanism, and six declared limitations. **Keep that shape:** the first draft numbered five top-level sections and had to be rewritten.
+- **`README.md`** — the profile table filled in with what each application actually does, plus a section recording the group, the application deployed, the scenario matrix, the measurement protocol, where each artefact lives, how to run everything, and the headline results.
+- A final revision pass over all three documents fixed two broken cross-references (§3.9.4 / §3.9.5 → §3.4.4 / §3.4.5), a column labelled "peak memory" that actually held a mean, a sentence quoting available-memory figures that could not be checked against the raw data (replaced by the measured peaks), and a claim about local execution of the three applications that was reworded to say only what the test suite demonstrates.
 
-## Continuation instructions for another assistant
+## Known limitations of the data
 
-1. Read this file before making changes.
-2. Respect all confirmed decisions and preserve the user's review gates.
-3. Check the latest progress log and actual workspace state; do not assume that a planned or listed stage is complete unless the log and files confirm it.
-4. If a significant design decision is unresolved, ask the user before proceeding. Do not treat approval to start scoping as approval of unreviewed requirements or implementation.
-5. At each completed stage, update this file in English with the status, actions, validation performed, files affected, and the next gated action.
+Declared in `RELATORIO.md` §3.4.5. They are to stay declared, not smoothed over.
+
+- **Host contention inflates the variance.** Two physical cores are shared by the guest, the load generator and the NAT engine — the likely cause of the two anomalies with no physical explanation: C3 at L2 (2.12 rps) and C4 at L2 (1.65 rps) came out worse than C1 at L2 (3.59 rps) although both have more RAM than C1.
+- **One repetition per level.** No standard deviation and no confidence interval; conclusions rest on trends between scenarios, not on differences between neighbouring levels.
+- **Small samples.** The ~3.5 rps ceiling yields only 57–149 requests per level, so p95 and especially p99 rest on few observations — the C1 L4 p99 of 35405 ms is a single event.
+- **C1 carried residual swap.** The guest was not rebooted between the probes behind §3.4.4 and C1's measurement, so the very first resource sample of C1 — taken before level 1 began — already shows 62.98 MB of swap in use, and that is the baseline quoted for C1 at L1 and L2. It affects C1's absolute baseline, not its 507 MB peak or any conclusion.
+- **HTTP 503 was never observed under load**, for the reason recorded above. The path exists and is unit-tested; at this throughput it is unreachable by design.
+
+## Open items
+
+1. **Group size.** The group table lists two members; the assignment states groups of three. Unresolved — only the user can settle it.
+2. **Nested repository / gitlink.** The outer repository stores `atividade2-demanda-desempenho/` as a gitlink (mode 160000) pointing at `https://github.com/RanyaG/atividade2-demanda-desempenho.git`, and there is no `.gitmodules`. A fresh clone therefore yields an empty folder, which blocks the "código no repositório da disciplina" checklist item. `RELATORIO.md` references the figures by paths inside that nested folder, so the two are coupled: whichever fix is chosen, the code has to be reachable at those paths.
+3. **Evidence of local execution for all three applications.** The assignment asks for it and the captured evidence covers the VM experiment only. Today the sole support for that item is the test suite, and `RELATORIO.md` §3.4.5 is worded to claim exactly that and no more. Capturing real local-run evidence would close the item properly.
+4. **Superseded Java / Spec Kit material** under the repository root's `apps/cpu-bound/` is still present; its removal was never authorized.
+5. **Pending user actions:** the commit, the LCC3 demonstration, and the delivery form once per member.
+
+## Continuation instructions
+
+1. Read this file and check the actual workspace before assuming anything is in the state described here.
+2. Respect the working agreement — in particular, never commit and never delete delivered artefacts without explicit approval.
+3. `RELATORIO.md` and `README.md` are professor-facing: Portuguese, the professor's template shape, and no claim the data does not support.
+4. Report unfinished work as unfinished rather than smoothing it over.

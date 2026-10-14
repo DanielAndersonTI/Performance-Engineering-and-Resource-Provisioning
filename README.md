@@ -19,9 +19,15 @@ Implementem três aplicações web de backend, usando a linguagem de programaç�
 
 | Perfil | Característica a exercitar | Aplicação desenvolvida |
 | --- | --- | --- |
-| CPU-bound | Predomínio de operações que consomem processador. | A preencher |
-| Memory-bound | Predomínio de operações que consomem memória. | A preencher |
-| IO-bound | Predomínio de operações de entrada e saída. | A preencher |
+| CPU-bound | Predomínio de operações que consomem processador. | SHA-256 repetido sobre um bloco fixo de 1 MiB, com o resumo realimentando o bloco a cada iteração — `apps/cpu/server.py` |
+| Memory-bound | Predomínio de operações que consomem memória. | Alocação de `size` MiB e escrita de um byte por página de 4 KiB, forçando a materialização de cada página — `apps/memory/server.py` |
+| IO-bound | Predomínio de operações de entrada e saída. | Escrita de `size` KiB em arquivo temporário, `fsync` para forçar a descida ao disco, e releitura — `apps/io/server.py` |
+
+As três aplicações foram implementadas em Python 3 (somente biblioteca padrão no
+servidor) e compartilham o mesmo contrato HTTP: `GET /health`, que identifica o
+perfil que respondeu, e `GET /work?size=N`, que executa o trabalho. A descrição
+completa de cada aplicação, as instruções de execução, o monitoramento e as
+decisões do grupo estão no [documento de resultados](RELATORIO.md).
 
 Para cada aplicação, documentem:
 
@@ -124,3 +130,67 @@ Organizem o repositório para que outra pessoa consiga entender e, quando possí
 - **Disco VDI:** link disponibilizado pelo professor; nos LCCs, usar a versão em `/local/uasc`.
 - **Template do documento de resultados:** material disponibilizado pelo professor.
 - **Formulário de entrega:** link disponibilizado pelo professor; cada integrante deve responder individualmente.
+
+---
+
+## Decisões e valores utilizados neste trabalho
+
+**Grupo:** Daniel Anderson de Souza Silva · Ranya Duran Greco
+
+| Decisão | Valor adotado |
+| --- | --- |
+| Linguagem | Python 3 — o servidor usa apenas a biblioteca padrão |
+| Aplicação implantada na VM | **Memory-bound** |
+| Cenários de provisionamento | C1 1 vCPU / 1 GB · C2 2 vCPU / 1 GB · C3 1 vCPU / 2 GB · C4 2 vCPU / 2 GB |
+| Níveis de demanda | 1, 2 e 4 clientes concorrentes, em cada cenário |
+| Tamanho da carga | 256 MiB por requisição |
+| Aquecimento / medição | 5 s não registrados / 40 s medidos, por nível |
+| Repetições | 1 |
+| Geração de carga | **Fora da VM**, do hospedeiro, via `scripts/load_test.py` |
+| Coleta na VM | `scripts/monitor.py`, intervalo de ~0,5 s |
+| VM | Ubuntu Server 22.04 LTS, rede NAT, portas 2222→22 e 8080→8000 |
+
+### Onde está cada artefato
+
+| Caminho | Conteúdo |
+| --- | --- |
+| `atividade2-demanda-desempenho/atividade2/atividade2_demanda/apps/` | as três aplicações |
+| `…/scripts/` | geração de carga, monitor, orquestrador, gráficos, captura de evidência |
+| `…/tests/` | 9 testes funcionais |
+| `…/results/` | dados brutos (`measurements.csv`, `run_log.csv`, `resources.csv`), `summary.csv` e `graphs/` |
+| `atividade2-demanda-desempenho/evidencias/` | configuração da VM em cada cenário e capturas de tela |
+| `RELATORIO.md` | documento de resultados |
+| `DEVELOPMENT_HANDOFF.md` | registro interno do processo de desenvolvimento (em inglês) |
+
+### Como executar
+
+Todos os comandos partem do diretório da aplicação:
+
+```bash
+cd atividade2-demanda-desempenho/atividade2/atividade2_demanda
+pip install -r requirements.txt     # matplotlib e psutil; o servidor usa só a stdlib
+
+python apps/cpu/server.py    --port 8000    # cada aplicação é um processo independente
+python apps/memory/server.py --port 8000
+python apps/io/server.py     --port 8000
+python apps/server.py --profile memory --port 8000   # ponto de entrada compartilhado
+
+python -m unittest discover -s tests -v     # 9 testes funcionais, todos aprovados
+```
+
+Requisitos: Python 3.10 ou superior. No interior da VM, o script de
+monitoramento requer `python3-psutil`, instalado via `apt`.
+
+### Principais resultados
+
+O detalhamento completo, os gráficos e as limitações estão no
+[documento de resultados](RELATORIO.md) — resultados na §3.3, interpretação,
+conclusões e limitações na §3.4.
+
+- Provisionar 2 GB em vez de 1 GB **eliminou o swap**: pico de 507 MB e 545 MB
+  nos cenários de 1 GB, contra 0 MB nos dois cenários de 2 GB.
+- **Dobrar os vCPUs não trouxe ganho.** A aplicação é serializada pela GIL do
+  CPython e não ocupa mais de um núcleo, então o segundo vCPU fica ocioso.
+- **O gargalo se desloca.** Em 1 GB o limitante é a memória; em 2 GB, com o swap
+  eliminado, passa a ser a CPU.
+- Não houve nenhuma falha, erro ou timeout nos 12 níveis medidos.
