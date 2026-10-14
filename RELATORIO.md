@@ -211,8 +211,8 @@ produziria curvas muito mais próximas entre si.
 ### 2.4 Etapas para a configuração da máquina virtual
 
 1. Instalação do Ubuntu Server 22.04 LTS no VirtualBox, seguindo o roteiro do
-   professor. A instalação foi feita com 2048 MB de memória: com 1024 MB — o
-   mínimo aceito pelo instalador — o processo travava.
+   professor (Figuras 1 a 3). A instalação foi feita com 2048 MB de memória: com
+   1024 MB — o mínimo aceito pelo instalador — o processo travava.
 2. Configuração da rede em modo NAT com dois redirecionamentos de porta,
    `ssh` 2222→22 e `app` 8080→8000, para que o hospedeiro alcance o guest.
 3. Instalação do `python3-psutil` no guest via `apt` (o guest não possui `pip`, e
@@ -243,18 +243,27 @@ segredos envolvidos na configuração.
 
 Cada cenário tem sua configuração registrada automaticamente pelo script
 `scripts/capture_evidence.py`, que consulta o próprio VirtualBox e grava o
-resultado. Os arquivos estão em `evidencias/`:
+resultado. Optamos por capturar a configuração direto do VirtualBox, e não
+redigitá-la, para que o registro não possa divergir do que de fato executou.
+
+![Tela de configuração da placa-mãe da máquina virtual](atividade2-demanda-desempenho/evidencias/vm-configuracao-placa-mae.png)
+
+*Figura 1 — Configuração da placa-mãe no VirtualBox.*
+
+![Tela de configuração do processador da máquina virtual](atividade2-demanda-desempenho/evidencias/vm-configuracao-processador.png)
+
+*Figura 2 — Configuração do processador no VirtualBox.*
+
+![Ubuntu Server instalado e em execução](atividade2-demanda-desempenho/evidencias/vm-ubuntu-instalada.png)
+
+*Figura 3 — Ubuntu Server 22.04 LTS instalado e em execução.*
+
+O registro completo de cada cenário está em `evidencias/`:
 
 | Arquivo | Conteúdo |
 | --- | --- |
-| `C1-config.txt` … `C4-config.txt` | Resumo do provisionamento e a descrição completa da máquina (`VBoxManage showvminfo --machinereadable`) |
-| `C1-console.png` … `C4-console.png` | Captura do console do guest em cada cenário |
-| `vm-configuracao-placa-mae.png` | Tela de configuração da placa-mãe |
-| `vm-configuracao-processador.png` | Tela de configuração do processador |
-| `vm-ubuntu-instalada.png` | Sistema instalado e em execução |
-
-Optamos por capturar a configuração direto do VirtualBox, e não redigitá-la,
-para que o registro não possa divergir do que de fato executou.
+| `C1-config.txt` … `C4-config.txt` | Resumo do provisionamento e a descrição completa da máquina (`VBoxManage showvminfo --machinereadable`), lidos da máquina em execução |
+| `C1-console.png` … `C4-console.png` | Console do guest logo após o boot, na mesma sessão em que a medição foi feita |
 
 ---
 
@@ -383,7 +392,7 @@ isso não é comparável diretamente entre cenários de 1 e 2 vCPUs.
 | C4 | 2 | 2048 | 4 | 2,07 | 1662 | 3545 | 4136 | 48,4% | 810 MB | 0 MB |
 
 Em nenhum dos 12 níveis houve falha, erro ou timeout: 100% das requisições
-respondidas com HTTP 200.
+respondidas com HTTP 200 (Figura 6).
 
 #### 3.3.2 Picos por cenário
 
@@ -396,42 +405,67 @@ respondidas com HTTP 200.
 
 #### 3.3.3 Gráficos
 
-Os gráficos estão em `results/graphs/`:
+As figuras a seguir relacionam a demanda (número de clientes simultâneos) com o
+desempenho observado e com a utilização dos recursos, em cada cenário. Os
+arquivos correspondentes estão em `results/graphs/`.
 
-| Arquivo | O que mostra |
-| --- | --- |
-| `latencia_vs_demanda.png` | p50, p95 e p99 em painéis separados, por cenário |
-| `vazao_vs_demanda.png` | Vazão efetiva contra a demanda |
-| `erros_vs_demanda.png` | Taxa de erro contra a demanda (nula em todos os pontos) |
-| `cpu_vs_demanda.png` | Utilização de CPU da VM contra a demanda |
-| `memoria_vs_demanda.png` | Memória utilizada contra a demanda |
-| `swap_vs_demanda.png` | Swap utilizado contra a demanda — a evidência direta do achado principal |
+![Latência por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/latencia_vs_demanda.png)
+
+*Figura 4 — Latência por demanda e provisionamento: p50, p95 e p99 em painéis
+separados, um por percentil.*
+
+![Vazão por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/vazao_vs_demanda.png)
+
+*Figura 5 — Vazão por demanda e provisionamento: requisições bem-sucedidas por
+segundo.*
+
+![Taxa de falha por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/erros_vs_demanda.png)
+
+*Figura 6 — Taxa de falha por demanda e provisionamento: nula em todos os doze
+pontos medidos.*
+
+![Utilização de CPU da VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/cpu_vs_demanda.png)
+
+*Figura 7 — Utilização de CPU da VM por demanda e provisionamento. 100%
+corresponde a todos os vCPUs provisionados ocupados, de modo que a altura não é
+comparável entre cenários de 1 e de 2 vCPUs.*
+
+![Memória utilizada na VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/memoria_vs_demanda.png)
+
+*Figura 8 — Memória utilizada na VM por demanda e provisionamento.*
+
+![Uso de swap na VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/swap_vs_demanda.png)
+
+*Figura 9 — Uso de swap na VM por demanda e provisionamento — a evidência direta
+do achado principal.*
 
 #### 3.3.4 A assinatura de saturação
 
 Em C1, a vazão sobe de 3,72 (nível 1) para 3,59 (nível 2) e **cai** para 1,98 no
 nível 4, enquanto o p95 salta de 293 ms para 5128 ms — um fator de 17. Vazão que
 para de crescer e depois regride, com a latência crescendo linearmente, é a
-assinatura clássica de um recurso saturado: os clientes adicionais não produzem
-trabalho útil novo, apenas entram na fila. A Lei de Little descreve exatamente
-isso — com vazão constante, o número de requisições em voo cresce na proporção
-direta da latência.
+assinatura clássica de um recurso saturado (Figuras 4 e 5): os clientes
+adicionais não produzem trabalho útil novo, apenas entram na fila. A Lei de
+Little descreve exatamente isso — com vazão constante, o número de requisições em
+voo cresce na proporção direta da latência.
 
 ### 3.4 Interpretação e conclusões
 
 #### 3.4.1 O provisionamento de memória é o fator decisivo
 
-O resultado mais limpo do experimento está na coluna de swap. Os dois cenários
-com 1 GB entraram em swap sob carga — 507 MB em C1 e 545 MB em C2. Os dois
-cenários com 2 GB registraram **zero** swap, em todos os níveis.
+O resultado mais limpo do experimento está na Figura 9 e na coluna de swap da
+tabela §3.3.1. Os dois cenários com 1 GB entraram em swap sob carga — 507 MB em
+C1 e 545 MB em C2. Os dois cenários com 2 GB registraram **zero** swap, em todos
+os níveis.
 
 Isso não é coincidência numérica: é a fronteira de memória sendo cruzada. Com 4
 clientes de 256 MiB, a carga simultânea é de 1024 MiB. Somada ao consumo de base
 do sistema (~230 MB), ela excede a memória utilizável de um guest de 1 GB — cujo
 total já fica abaixo dos 1024 MB nominais por causa da reserva do hipervisor — e
-cabe com folga nos 2 GB. Os picos medidos confirmam a leitura: os dois cenários
-de 1 GB chegaram a 879 MB e 877 MB de memória residente e ainda assim precisaram
-recorrer ao swap, enquanto os de 2 GB chegaram a 1202 MB e 1204 MB sem usá-lo.
+cabe com folga nos 2 GB. Os picos medidos (Figura 8) confirmam a leitura: os dois
+cenários de 1 GB chegaram a 879 MB e 877 MB de memória residente e ainda assim
+precisaram recorrer ao swap, enquanto os de 2 GB chegaram a 1202 MB e 1204 MB sem
+usá-lo.
 
 O efeito sobre o desempenho é direto: no nível 4, o p95 de C4 (3545 ms) é
 **3,3 vezes menor** que o de C2 (11616 ms), com a mesma CPU e o dobro de RAM. A
@@ -447,9 +481,10 @@ diferem só na CPU:
 | C1 (1 vCPU) → C2 (2 vCPU), ambos 1 GB | 1,98 → 1,19 rps | piorou |
 | C3 (1 vCPU) → C4 (2 vCPU), ambos 2 GB | 2,05 → 2,07 rps | empatou |
 
-A explicação está na coluna de CPU da tabela §3.3.1. Nos cenários de 2 vCPUs a
-utilização total fica em torno de 48%, ou seja, **cerca de um núcleo** — a VM
-nunca ocupa os dois. O recurso adicional simplesmente não é utilizado.
+A explicação está na coluna de CPU da tabela §3.3.1 e na Figura 7. Nos cenários
+de 2 vCPUs a utilização total fica em torno de 48%, ou seja, **cerca de um
+núcleo** — a VM nunca ocupa os dois. O recurso adicional simplesmente não é
+utilizado.
 
 A causa é a GIL do CPython. O trabalho da aplicação Memory-bound é Python puro,
 e a GIL serializa a execução de bytecode: apenas uma thread executa por vez,
