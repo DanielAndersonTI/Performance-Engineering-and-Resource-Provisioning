@@ -1,0 +1,34 @@
+﻿====================================================================
+Scenario        : C3
+Application     : memory
+Work URL        : http://127.0.0.1:8080/work?size=256
+Demand levels   : 1, 2, 4
+Per level       : 5s warm-up + 40s measured
+Measuring total : 2.2 min
+====================================================================
+
+In the guest, while this script waits, run:
+
+    python scripts/monitor.py --scenario C3 --seconds 180
+
+Starting the sweep in 15s... (Ctrl+C to abort)
+
+[C3-L1] warm-up 5s at concurrency 1...
+[C3-L1] measuring 40s...
+[C3-L1] 147/147 ok  3.6521 rps  p50=265.767ms  p95=322.274ms  errors=none
+
+[C3-L2] warm-up 5s at concurrency 2...
+[C3-L2] measuring 40s...
+[C3-L2] 147/147 ok  3.6333 rps  p50=525.772ms  p95=680.588ms  errors=none
+
+[C3-L4] warm-up 5s at concurrency 4...
+[C3-L4] measuring 40s...
+[C3-L4] 152/152 ok  3.786 rps  p50=1036.852ms  p95=1443.777ms  errors=none
+
+Level summary for C3
+  level   ok/attempts       rps    p50 ms    p95 ms
+      1       147/147    3.6521   265.767   322.274
+      2       147/147    3.6333   525.772   680.588
+      4       152/152     3.786  1036.852  1443.777
+
+Wrote 3 level windows to results/run_log.csv and the measurements to results/measurements.csv.

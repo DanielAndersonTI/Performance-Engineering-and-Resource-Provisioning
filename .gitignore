@@ -1,0 +1,7 @@
+# Artefatos gerados pelo Python
+__pycache__/
+*.py[cod]
+
+# Ambientes virtuais
+.venv/
+venv/

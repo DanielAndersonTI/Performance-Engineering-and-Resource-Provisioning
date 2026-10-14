@@ -141,14 +141,14 @@ Organizem o repositório para que outra pessoa consiga entender e, quando possí
 | --- | --- |
 | Linguagem | Python 3 — o servidor usa apenas a biblioteca padrão |
 | Aplicação implantada na VM | **Memory-bound** |
-| Cenários de provisionamento | C1 1 vCPU / 1 GB · C2 2 vCPU / 1 GB · C3 1 vCPU / 2 GB · C4 2 vCPU / 2 GB |
+| Cenários de provisionamento | C1 1 vCPU / 1 GB · C2 2 vCPU / 1 GB · C3 1 vCPU / 2 GB · C4 2 vCPU / 2 GB — **C1 a C4 no conjunto A, C1 e C3 no conjunto B** |
 | Níveis de demanda | 1, 2 e 4 clientes concorrentes, em cada cenário |
 | Tamanho da carga | 256 MiB por requisição |
 | Aquecimento / medição | 5 s não registrados / 40 s medidos, por nível |
 | Repetições | 1 |
 | Geração de carga | **Fora da VM**, do hospedeiro, via `scripts/load_test.py` |
 | Coleta na VM | `scripts/monitor.py`, intervalo de ~0,5 s |
-| VM | Ubuntu Server 22.04 LTS, rede NAT, portas 2222→22 e 8080→8000 |
+| VMs | `Po-2026.2` (conjunto A, disco de 12 GB do ISO) e `Po_2_2026.2` (conjunto B, imagem `ubuntu_serve_2204_poi.vdi` do professor) — ambas Ubuntu Server 22.04 LTS, rede NAT, portas 2222→22 e 8080→8000; a do LCC3 tem ainda 8090→80 para o nginx |
 
 ### Onde está cada artefato
 
@@ -157,10 +157,13 @@ Organizem o repositório para que outra pessoa consiga entender e, quando possí
 | `atividade2-demanda-desempenho/atividade2/atividade2_demanda/apps/` | as três aplicações |
 | `…/scripts/` | geração de carga, monitor, orquestrador, gráficos, captura de evidência |
 | `…/tests/` | 9 testes funcionais |
-| `…/results/` | dados brutos (`measurements.csv`, `run_log.csv`, `resources.csv`), `summary.csv` e `graphs/` |
+| `…/results/` | **conjunto A** — dados brutos (`measurements.csv`, `run_log.csv`, `resources.csv`), `summary.csv` e `graphs/` |
+| `…/results/ensaio-2026-10-14/` | ensaio preliminar com o perfil CPU-bound, preservado como dado bruto e não usado nas conclusões |
 | `atividade2-demanda-desempenho/evidencias/` | configuração da VM em cada cenário e capturas de tela |
+| `lcc3/dados/` | **conjunto B** — a replicação no ambiente do LCC3: os mesmos três arquivos brutos, `summary.csv`, logs e `graphs/` |
+| `lcc3/evidencias/` | capturas de tela do roteiro do LCC3 e a configuração da VM `Po_2_2026.2` |
 | `figuras/` | cópias das figuras usadas no relatório (gráficos e capturas da VM) |
-| `RELATORIO.md` | documento de resultados |
+| `RELATORIO.md` | **o único documento de resultados do projeto** |
 | `DEVELOPMENT_HANDOFF.md` | registro interno do processo de desenvolvimento (em inglês) |
 
 ### Como executar
@@ -185,8 +188,10 @@ monitoramento requer `python3-psutil`, instalado via `apt`.
 ### Principais resultados
 
 O detalhamento completo, os gráficos e as limitações estão no
-[documento de resultados](RELATORIO.md) — resultados na §3.3, interpretação,
-conclusões e limitações na §3.4.
+[documento de resultados](RELATORIO.md) — a declaração de qual conjunto de dados
+alimenta cada seção abre o documento; os resultados do conjunto A (matriz
+completa C1–C4) estão na §3.3, os do conjunto B (replicação no LCC3) na §3.4, a
+comparação entre os dois na §3.5 e as conclusões na §3.7.
 
 - Provisionar 2 GB em vez de 1 GB **eliminou o swap**: pico de 507 MB e 545 MB
   nos cenários de 1 GB, contra 0 MB nos dois cenários de 2 GB.
@@ -194,4 +199,9 @@ conclusões e limitações na §3.4.
   CPython e não ocupa mais de um núcleo, então o segundo vCPU fica ocioso.
 - **O gargalo se desloca.** Em 1 GB o limitante é a memória; em 2 GB, com o swap
   eliminado, passa a ser a CPU.
-- Não houve nenhuma falha, erro ou timeout nos 12 níveis medidos.
+- Não houve nenhuma falha, erro ou timeout nos 18 pontos medidos — 12 no
+  conjunto A e 6 no conjunto B.
+- **O achado se reproduz.** O conjunto B, medido numa VM construída da imagem do
+  professor e não preparada por nós, repetiu a diferença de swap com magnitude
+  praticamente idêntica (337 MB contra 318 MB no nível 4 de 1 GB, e zero nos dois
+  casos em 2 GB).

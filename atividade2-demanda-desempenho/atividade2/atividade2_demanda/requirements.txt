@@ -1,0 +1,2 @@
+matplotlib>=3.5,<4
+psutil>=5.9,<8
