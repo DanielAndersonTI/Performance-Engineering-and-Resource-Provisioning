@@ -33,6 +33,7 @@ atribuída ao perfil de carga, e não a detalhes de implementação.
 Atividade2-Demanda-Provisionamento-Desempenho/
 ├── README.md                          enunciado da atividade e decisões do grupo
 ├── RELATORIO.md                       este documento
+├── figuras/                           figuras apresentadas neste documento
 └── atividade2-demanda-desempenho/
     ├── evidencias/                    configuração da VM e capturas de tela
     └── atividade2/atividade2_demanda/
@@ -244,17 +245,19 @@ segredos envolvidos na configuração.
 Cada cenário tem sua configuração registrada automaticamente pelo script
 `scripts/capture_evidence.py`, que consulta o próprio VirtualBox e grava o
 resultado. Optamos por capturar a configuração direto do VirtualBox, e não
-redigitá-la, para que o registro não possa divergir do que de fato executou.
+redigitá-la, para que o registro não possa divergir do que de fato executou. As
+capturas abaixo são as originais, copiadas para `figuras/`, ao lado deste
+documento.
 
-![Tela de configuração da placa-mãe da máquina virtual](atividade2-demanda-desempenho/evidencias/vm-configuracao-placa-mae.png)
+![Tela de configuração da placa-mãe da máquina virtual](figuras/vm-configuracao-placa-mae.png)
 
 *Figura 1 — Configuração da placa-mãe no VirtualBox.*
 
-![Tela de configuração do processador da máquina virtual](atividade2-demanda-desempenho/evidencias/vm-configuracao-processador.png)
+![Tela de configuração do processador da máquina virtual](figuras/vm-configuracao-processador.png)
 
 *Figura 2 — Configuração do processador no VirtualBox.*
 
-![Ubuntu Server instalado e em execução](atividade2-demanda-desempenho/evidencias/vm-ubuntu-instalada.png)
+![Ubuntu Server instalado e em execução](figuras/vm-ubuntu-instalada.png)
 
 *Figura 3 — Ubuntu Server 22.04 LTS instalado e em execução.*
 
@@ -406,35 +409,36 @@ respondidas com HTTP 200 (Figura 6).
 #### 3.3.3 Gráficos
 
 As figuras a seguir relacionam a demanda (número de clientes simultâneos) com o
-desempenho observado e com a utilização dos recursos, em cada cenário. Os
-arquivos correspondentes estão em `results/graphs/`.
+desempenho observado e com a utilização dos recursos, em cada cenário. Elas são
+geradas por `scripts/plot_results.py` em `results/graphs/` e copiadas para
+`figuras/`, ao lado deste documento.
 
-![Latência por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/latencia_vs_demanda.png)
+![Latência por demanda e provisionamento](figuras/latencia_vs_demanda.png)
 
 *Figura 4 — Latência por demanda e provisionamento: p50, p95 e p99 em painéis
 separados, um por percentil.*
 
-![Vazão por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/vazao_vs_demanda.png)
+![Vazão por demanda e provisionamento](figuras/vazao_vs_demanda.png)
 
 *Figura 5 — Vazão por demanda e provisionamento: requisições bem-sucedidas por
 segundo.*
 
-![Taxa de falha por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/erros_vs_demanda.png)
+![Taxa de falha por demanda e provisionamento](figuras/erros_vs_demanda.png)
 
 *Figura 6 — Taxa de falha por demanda e provisionamento: nula em todos os doze
 pontos medidos.*
 
-![Utilização de CPU da VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/cpu_vs_demanda.png)
+![Utilização de CPU da VM por demanda e provisionamento](figuras/cpu_vs_demanda.png)
 
 *Figura 7 — Utilização de CPU da VM por demanda e provisionamento. 100%
 corresponde a todos os vCPUs provisionados ocupados, de modo que a altura não é
 comparável entre cenários de 1 e de 2 vCPUs.*
 
-![Memória utilizada na VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/memoria_vs_demanda.png)
+![Memória utilizada na VM por demanda e provisionamento](figuras/memoria_vs_demanda.png)
 
 *Figura 8 — Memória utilizada na VM por demanda e provisionamento.*
 
-![Uso de swap na VM por demanda e provisionamento](atividade2-demanda-desempenho/atividade2/atividade2_demanda/results/graphs/swap_vs_demanda.png)
+![Uso de swap na VM por demanda e provisionamento](figuras/swap_vs_demanda.png)
 
 *Figura 9 — Uso de swap na VM por demanda e provisionamento — a evidência direta
 do achado principal.*

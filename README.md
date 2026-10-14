@@ -159,6 +159,7 @@ Organizem o repositório para que outra pessoa consiga entender e, quando possí
 | `…/tests/` | 9 testes funcionais |
 | `…/results/` | dados brutos (`measurements.csv`, `run_log.csv`, `resources.csv`), `summary.csv` e `graphs/` |
 | `atividade2-demanda-desempenho/evidencias/` | configuração da VM em cada cenário e capturas de tela |
+| `figuras/` | cópias das figuras usadas no relatório (gráficos e capturas da VM) |
 | `RELATORIO.md` | documento de resultados |
 | `DEVELOPMENT_HANDOFF.md` | registro interno do processo de desenvolvimento (em inglês) |
 
